@@ -259,10 +259,13 @@ footer {
 }
 
 /* Style untuk menu yang sedang aktif */
-.sidebar-nav li.active a {
-    background-color: #fde8e6;
-    color: #c0392b;
+/* Style untuk menu yang sedang aktif di sidebar dan header */
+.sidebar-nav li.active a,
+.nav-menu li.active a {
+    color: #c0392b;      /* Ganti warna teks menjadi merah tua */
+    font-weight: 700;   /* Dibuat lebih tebal agar menonjol */
 }
+
 
 .sidebar-nav li a i {
     width: 20px; /* Agar ikon sejajar */
@@ -555,4 +558,54 @@ body.auth-page {
 
 .auth-page .back-btn:hover {
     color: #e91e63; /* Warna pink saat disentuh mouse */
+}
+/* === STYLE UNTUK HALAMAN KONTEN (PANDUAN, DLL) === */
+
+.content-page {
+    padding: 0 5%;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.page-header {
+    background-color: #e74c3c;
+    color: white;
+    padding: 1.5rem 2rem;
+    border-radius: 0 0 10px 10px;
+    margin-bottom: 2rem;
+}
+
+.page-header h1 {
+    margin: 0;
+    font-size: 2rem;
+}
+
+.page-content {
+    background-color: #fff;
+    padding: 2.5rem;
+    border-radius: 10px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+    margin-bottom: 3rem;
+}
+
+.guide-section {
+    margin-bottom: 2.5rem;
+}
+
+.guide-section h2 {
+    font-size: 1.5rem;
+    color: #2c3e50;
+    margin-bottom: 1.5rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 2px solid #f0f0f0;
+}
+
+.guide-section ol {
+    padding-left: 20px;
+}
+
+.guide-section li {
+    margin-bottom: 1rem;
+    line-height: 1.7;
+    color: #555;
 }
