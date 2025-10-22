@@ -13,14 +13,14 @@
 <body>
     <header>
       <nav class="navbar">
-    <a href="index.html" class="nav-brand">Tahura Raden Soerjo</a>
+    <a href="index.php" class="nav-brand">Tahura Raden Soerjo</a>
     <ul class="nav-menu">
-        <li><a href="index.html">Beranda</a></li>
-        <li><a href="sop.html">SOP Pendaki</a></li>
-        <li><a href="PanduanBooking.html">Panduan Booking</a></li>
+        <li><a href="index.php">Beranda</a></li>
+        <li><a href="sop.php">SOP Pendaki</a></li>
+        <li><a href="PanduanBooking.php">Panduan Booking</a></li>
         <li><a href="#">Panduan Pembayaran</a></li>
         <li><a href="#">Status Booking</a></li>
-        <li><a href="login.html" class="login-btn">Login</a></li>
+        <li><a href="login.php" class="login-btn">Login</a></li>
     </ul>
 </nav>
     </header>
