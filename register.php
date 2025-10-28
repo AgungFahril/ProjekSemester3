@@ -1,25 +1,51 @@
+<?php
+// Memulai sesi untuk bisa membaca $_SESSION
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
+// Logika untuk menampilkan pesan error/sukses registrasi
+$message = '';
+$message_type = ''; // 'success' atau 'error'
+if (isset($_SESSION['register_message'])) {
+    $message = $_SESSION['register_message'];
+    $message_type = $_SESSION['register_message_type'] ?? 'error';
+    unset($_SESSION['register_message']);
+    unset($_SESSION['register_message_type']);
+}
+
+// Opsional: Cek jika sudah login, redirect ke halaman lain
+// if (isset($_SESSION['user_id'])) {
+//     header('Location: index.php');
+//     exit();
+// }
+?>
 <!DOCTYPE html>
 <html lang="id">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Registrasi Pendaki</title>
+    <title>Registrasi - Tahura Raden Soerjo</title>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
 </head>
-<body class="auth-page">
-    <div class="auth-container">
+<body class="auth-page"> <div class="auth-container">
         <div class="auth-form-section">
             <div class="auth-form-wrapper">
-                <a href="index.php" class="back-btn">
+                 <a href="index.php" class="back-btn">
                     <i class="fa-solid fa-arrow-left"></i> Kembali
                 </a>
+                <h1 class="auth-title">Daftar Sekarang Juga</h1>
+                 <p class="auth-subtitle" style="margin-bottom: 1.5rem; color: #666;">Buat akun baru untuk memulai booking pendakian</p>
 
-                <h1>Daftar Sekarang Juga</h1>
+                <?php if (!empty($message)): ?>
+                    <p style="color: <?= ($message_type == 'success') ? 'green' : 'red'; ?>; margin-bottom: 1rem; text-align: center; background-color: <?= ($message_type == 'success') ? '#e8f5e9' : '#ffebee'; ?>; padding: 10px; border-radius: 5px; border: 1px solid <?= ($message_type == 'success') ? '#a5d6a7' : '#e57373'; ?>;">
+                        <?= htmlspecialchars($message); ?>
+                    </p>
+                <?php endif; ?>
 
-                <!-- ✅ Form registrasi -->
-                <form action="backend/register.php" method="POST">
+                <form action="backend/register.php" method="POST" class="auth-form">
                     <div class="input-group">
                         <label for="nama">Nama Lengkap</label>
                         <input type="text" name="nama" id="nama" placeholder="Masukkan nama Anda" required>
@@ -34,8 +60,7 @@
                         <label for="password">Password</label>
                         <div class="password-wrapper">
                             <input type="password" name="password" id="password" placeholder="Masukkan password Anda" required>
-                            <i class="fa-solid fa-eye" id="togglePassword"></i>
-                        </div>
+                            <i class="fa-solid fa-eye toggle-password" id="togglePassword"></i> </div>
                     </div>
 
                     <div class="input-group">
@@ -46,22 +71,17 @@
                     <button type="submit" name="register" class="btn btn-primary">REGISTER</button>
                 </form>
 
-                <p class="auth-link">Sudah punya akun? <a href="login.php">Login</a></p>
+                <p class="auth-link">
+                    Sudah punya akun?
+                    <a href="login.php">Login</a>
+                </p>
             </div>
         </div>
 
-        <div class="auth-image-section"></div>
+        <div class="auth-image-section">
+            </div>
     </div>
 
-    <script>
-        // 👁 Toggle password visibility
-        const togglePassword = document.querySelector("#togglePassword");
-        const password = document.querySelector("#password");
-        togglePassword.addEventListener("click", function () {
-            const type = password.getAttribute("type") === "password" ? "text" : "password";
-            password.setAttribute("type", type);
-            this.classList.toggle("fa-eye-slash");
-        });
-    </script>
+    <script src="script.js"></script> 
 </body>
 </html>

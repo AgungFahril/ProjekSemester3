@@ -18,7 +18,7 @@ $currentPage = basename($_SERVER['PHP_SELF']);
         <li <?= ($currentPage == 'PanduanPembayaran.php') ? 'class="active"' : '' ?>>
             <a href="PanduanPembayaran.php">Panduan Pembayaran</a>
         </li>
-        <li <?= ($currentPage == 'StatusBooking.php') ? 'class="active"' : '' ?>>
+       <li <?= ($currentPage == 'StatusBooking.php') ? 'class="active"' : '' ?>>
             <a href="StatusBooking.php">Status Booking</a>
         </li>
 

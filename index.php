@@ -27,7 +27,7 @@ session_start();
                 <?php if (isset($_SESSION['user_id'])): ?>
                     <a href="pengunjung/booking.php" class="btn btn-primary">BOOKING</a>
                     <a href="StatusBooking.php" class="btn btn-secondary">STATUS BOOKING</a>
-                <?php else: ?>
+                <?php else: ?>          
                     <a href="login.php" class="btn btn-primary">BOOKING</a>
                     <a href="login.php" class="btn btn-secondary">STATUS BOOKING</a>
                 <?php endif; ?>
