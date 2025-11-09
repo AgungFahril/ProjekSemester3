@@ -106,7 +106,7 @@ session_start();
 </main>
 
 <footer>
-    <p>&copy; 2025 Tahura Raden Soerjo. All Rights Reserved.</p>
+    <p>&copy; 2025 Gunung Raung. All Rights Reserved.</p>
 </footer>
 
 </body>

@@ -34,8 +34,8 @@ if (isset($_POST['register'])) {
     $password_hash = password_hash($password_plain, PASSWORD_DEFAULT);
 
     // Simpan ke tabel users
-    $insert_user = $conn->prepare("INSERT INTO users (nama, email, password, no_hp, role) VALUES (?, ?, ?, ?, 'pendaki')");
-    $insert_user->bind_param("ssss", $nama, $email, $password_hash, $no_hp);
+    $insert_user = $conn->prepare("INSERT INTO users (nama, email, password, role) VALUES (?, ?, ?, 'pendaki')");
+    $insert_user->bind_param("sss", $nama, $email, $password_hash);
 
     if ($insert_user->execute()) {
         // Ambil user_id terakhir
