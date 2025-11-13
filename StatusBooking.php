@@ -3,10 +3,49 @@ ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 
+session_start();
 include 'backend/koneksi.php';
 
 $bookings = [];
-if (isset($_POST['cek_token'])) {
+$filter = $_GET['filter'] ?? 'all';
+
+// Jika ada filter (dari dashboard)
+if (isset($_GET['filter']) && isset($_SESSION['user_id'])) {
+    $user_id = $_SESSION['user_id'];
+    $whereClause = "ps.user_id = ?";
+    $bindType = "i";
+    $bindValue = $user_id;
+    
+    // Filter berdasarkan status
+    if ($filter === 'success') {
+        $whereClause .= " AND ps.status_pesanan IN ('Terkonfirmasi', 'Approved', 'Confirmed', 'lunas')";
+    } elseif ($filter === 'pending') {
+        $whereClause .= " AND ps.status_pesanan IN ('Menunggu Pembayaran', 'Pending', 'menunggu_pembayaran', 'menunggu_konfirmasi')";
+    } elseif ($filter === 'cancelled') {
+        $whereClause .= " AND ps.status_pesanan IN ('Dibatalkan', 'Cancelled', 'Rejected', 'batal')";
+    }
+    
+    $sql = "
+        SELECT 
+            ps.kode_token, ps.pesanan_id, ps.status_pesanan, ps.total_bayar, 
+            ps.tanggal_pesan, ps.jumlah_pendaki,
+            p.tanggal_pendakian, p.tanggal_turun, 
+            jp.nama_jalur
+        FROM pesanan ps
+        JOIN pendakian p ON ps.pendakian_id = p.pendakian_id
+        JOIN jalur_pendakian jp ON p.jalur_id = jp.jalur_id
+        WHERE $whereClause
+        ORDER BY ps.pesanan_id DESC
+    ";
+    $stmt = $conn->prepare($sql);
+    $stmt->bind_param($bindType, $bindValue);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $bookings = $result->fetch_all(MYSQLI_ASSOC);
+    $stmt->close();
+}
+// Jika mencari berdasarkan token (cara lama)
+elseif (isset($_POST['cek_token'])) {
     $kode_token = strtoupper(trim($_POST['kode_token']));
 
     $sql = "
@@ -134,12 +173,29 @@ button:hover { background: #2e7d32; }
 
 <main class="content-page">
 <div class="status-table-container">
-    <h2>🔍 Cek Status Booking</h2>
+    <?php 
+    // Tampilkan judul berdasarkan filter
+    if (isset($_GET['filter'])) {
+        if ($filter === 'success') {
+            echo '<h2>✓ Transaksi Sukses</h2>';
+        } elseif ($filter === 'pending') {
+            echo '<h2>⏱ Transaksi Menunggu</h2>';
+        } elseif ($filter === 'cancelled') {
+            echo '<h2>✕ Transaksi Dibatalkan</h2>';
+        } else {
+            echo '<h2>� Semua Transaksi</h2>';
+        }
+    } else {
+        echo '<h2>�🔍 Cek Status Booking</h2>';
+    }
+    ?>
 
+    <?php if (!isset($_GET['filter'])): ?>
     <form method="POST">
         <input type="text" name="kode_token" placeholder="Masukkan Kode Token Booking" maxlength="10" required>
         <button type="submit" name="cek_token">Cek Status</button>
     </form>
+    <?php endif; ?>
 
     <?php if (isset($_POST['cek_token']) && empty($bookings)): ?>
         <script>
@@ -193,6 +249,14 @@ button:hover { background: #2e7d32; }
         </table>
     <?php elseif (!isset($_POST['cek_token'])): ?>
         <p class="no-booking">Masukkan kode token booking untuk melihat status pendakian kamu.</p>
+    <?php endif; ?>
+    
+    <?php if (isset($_GET['filter'])): ?>
+        <div style="margin-top: 30px; text-align: center;">
+            <a href="pengunjung/dashboard.php" style="display: inline-flex; align-items: center; gap: 8px; background: #e74c3c; color: white; padding: 12px 25px; border-radius: 8px; text-decoration: none; font-weight: 600; transition: all 0.3s ease;">
+                ← Kembali ke Dashboard
+            </a>
+        </div>
     <?php endif; ?>
 </div>
 </main>

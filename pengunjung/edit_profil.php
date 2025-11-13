@@ -12,7 +12,7 @@ $message = '';
 $message_type = '';
 
 // Ambil data user
-$stmt = $conn->prepare("SELECT nama, email, no_hp FROM users WHERE user_id = ?");
+$stmt = $conn->prepare("SELECT nama, email, foto_profil FROM users WHERE user_id = ?");
 $stmt->bind_param("i", $user_id);
 $stmt->execute();
 $result = $stmt->get_result();
@@ -20,46 +20,81 @@ $user_data = $result->fetch_assoc();
 $stmt->close();
 
 // Ambil data pendaki
-$stmt = $conn->prepare("SELECT no_identitas, alamat, umur FROM pendaki WHERE user_id = ?");
+$stmt = $conn->prepare("SELECT nik, alamat, no_hp FROM pendaki_detail WHERE user_id = ?");
 $stmt->bind_param("i", $user_id);
 $stmt->execute();
 $result = $stmt->get_result();
 $pendaki_data = $result->fetch_assoc();
 $stmt->close();
 
+// Buat folder uploads jika belum ada
+$uploads_dir = '../uploads/profil';
+if (!is_dir($uploads_dir)) {
+    mkdir($uploads_dir, 0777, true);
+}
+
 // Proses update profil
 if (isset($_POST['update_profil'])) {
     $nama = trim($_POST['nama']);
     $email = trim($_POST['email']);
+    $nik = trim($_POST['nik']);
     $no_hp = trim($_POST['no_hp']);
-    $no_identitas = trim($_POST['no_identitas']);
     $alamat = trim($_POST['alamat']);
-    $umur = !empty($_POST['umur']) ? intval($_POST['umur']) : null;
+    $foto_profil = $user_data['foto_profil'] ?? null; // Keep existing foto if not changed
 
-    // Update tabel users
-    $stmt = $conn->prepare("UPDATE users SET nama = ?, email = ?, no_hp = ? WHERE user_id = ?");
-    $stmt->bind_param("sssi", $nama, $email, $no_hp, $user_id);
-    
-    if ($stmt->execute()) {
-        // Update tabel pendaki
-        $stmt2 = $conn->prepare("UPDATE pendaki SET nama = ?, no_identitas = ?, alamat = ?, umur = ? WHERE user_id = ?");
-        $stmt2->bind_param("sssii", $nama, $no_identitas, $alamat, $umur, $user_id);
-        $stmt2->execute();
-        $stmt2->close();
+    // Handle file upload
+    if (!empty($_FILES['foto_profil']['name'])) {
+        $file = $_FILES['foto_profil'];
+        $allowed = ['jpg', 'jpeg', 'png', 'gif'];
+        $filename = basename($file['name']);
+        $ext = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
 
-        $_SESSION['nama'] = $nama;
-        $_SESSION['email'] = $email;
-        $message = 'Profil berhasil diperbarui!';
-        $message_type = 'success';
-        
-        // Refresh data
-        $user_data = ['nama' => $nama, 'email' => $email, 'no_hp' => $no_hp];
-        $pendaki_data = ['no_identitas' => $no_identitas, 'alamat' => $alamat, 'umur' => $umur];
-    } else {
-        $message = 'Gagal memperbarui profil.';
-        $message_type = 'error';
+        if (in_array($ext, $allowed) && $file['size'] <= 5242880) { // 5MB max
+            $new_filename = $user_id . '_' . time() . '.' . $ext;
+            $upload_path = '../uploads/profil/' . $new_filename;
+
+            if (move_uploaded_file($file['tmp_name'], $upload_path)) {
+                // Hapus foto lama jika ada
+                if ($foto_profil && file_exists('../uploads/profil/' . $foto_profil)) {
+                    unlink('../uploads/profil/' . $foto_profil);
+                }
+                $foto_profil = $new_filename;
+            } else {
+                $message = 'Gagal upload foto profil.';
+                $message_type = 'error';
+            }
+        } else {
+            $message = 'Format foto tidak didukung atau ukuran terlalu besar (max 5MB).';
+            $message_type = 'error';
+        }
     }
-    $stmt->close();
+
+    if (empty($message)) {
+        // Update tabel users
+        $stmt = $conn->prepare("UPDATE users SET nama = ?, email = ?, foto_profil = ? WHERE user_id = ?");
+        $stmt->bind_param("sssi", $nama, $email, $foto_profil, $user_id);
+        
+        if ($stmt->execute()) {
+            // Update tabel pendaki_detail
+            $stmt2 = $conn->prepare("UPDATE pendaki_detail SET nik = ?, no_hp = ?, alamat = ? WHERE user_id = ?");
+            $stmt2->bind_param("sssi", $nik, $no_hp, $alamat, $user_id);
+            $stmt2->execute();
+            $stmt2->close();
+
+            $_SESSION['nama'] = $nama;
+            $_SESSION['email'] = $email;
+            $message = 'Profil berhasil diperbarui!';
+            $message_type = 'success';
+            
+            // Refresh data
+            $user_data = ['nama' => $nama, 'email' => $email, 'foto_profil' => $foto_profil];
+            $pendaki_data = ['nik' => $nik, 'no_hp' => $no_hp, 'alamat' => $alamat];
+        } else {
+            $message = 'Gagal memperbarui profil.';
+            $message_type = 'error';
+        }
+        $stmt->close();
+    }
 }
 
 // Proses ubah password
@@ -127,10 +162,10 @@ if (isset($_POST['ubah_password'])) {
 
         .sidebar {
             width: 280px;
-            background: linear-gradient(180deg, #e74c3c 0%, #c0392b 100%);
+            background: linear-gradient(180deg, #16a34a 0%, #15803d 100%);
             color: white;
             padding: 40px 0;
-            box-shadow: 4px 0 20px rgba(231, 76, 60, 0.3);
+            box-shadow: 4px 0 20px rgba(22, 163, 74, 0.3);
             position: fixed;
             height: 100vh;
             overflow-y: auto;
@@ -147,7 +182,7 @@ if (isset($_POST['ubah_password'])) {
         .user-avatar {
             width: 70px;
             height: 70px;
-            background: linear-gradient(135deg, #e74c3c, #d43f26);
+            background: linear-gradient(135deg, #16a34a, #15803d);
             border-radius: 50%;
             display: flex;
             align-items: center;
@@ -158,6 +193,14 @@ if (isset($_POST['ubah_password'])) {
             margin-right: 18px;
             box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
             border: 3px solid rgba(255, 255, 255, 0.2);
+            overflow: hidden;
+            object-fit: cover;
+        }
+
+        .user-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
         }
 
         .user-info h3 {
@@ -220,7 +263,7 @@ if (isset($_POST['ubah_password'])) {
         .back-link {
             display: inline-flex;
             align-items: center;
-            color: #e74c3c;
+            color: #16a34a;
             text-decoration: none;
             margin-bottom: 30px;
             font-weight: 600;
@@ -228,13 +271,13 @@ if (isset($_POST['ubah_password'])) {
         }
 
         .back-link:hover {
-            color: #c0392b;
+            color: #15803d;
             transform: translateX(-5px);
         }
 
         .page-title {
             font-size: 32px;
-            color: #e74c3c;
+            color: #16a34a;
             margin-bottom: 10px;
         }
 
@@ -270,11 +313,11 @@ if (isset($_POST['ubah_password'])) {
             border-radius: 15px;
             box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
             margin-bottom: 30px;
-            border-left: 5px solid #e74c3c;
+            border-left: 5px solid #16a34a;
         }
 
         .form-section h2 {
-            color: #e74c3c;
+            color: #16a34a;
             margin-bottom: 30px;
             font-size: 22px;
             display: flex;
@@ -314,8 +357,8 @@ if (isset($_POST['ubah_password'])) {
         .form-group input:focus,
         .form-group textarea:focus {
             outline: none;
-            border-color: #e74c3c;
-            box-shadow: 0 0 0 3px rgba(231, 76, 60, 0.1);
+            border-color: #16a34a;
+            box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.1);
         }
 
         .form-group textarea {
@@ -344,14 +387,14 @@ if (isset($_POST['ubah_password'])) {
         }
 
         .btn-primary {
-            background: linear-gradient(135deg, #e74c3c, #c0392b);
+            background: linear-gradient(135deg, #16a34a, #15803d);
             color: white;
-            box-shadow: 0 4px 15px rgba(231, 76, 60, 0.3);
+            box-shadow: 0 4px 15px rgba(22, 163, 74, 0.3);
         }
 
         .btn-primary:hover {
             transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(231, 76, 60, 0.4);
+            box-shadow: 0 8px 25px rgba(22, 163, 74, 0.4);
         }
 
         .btn-secondary {
@@ -362,6 +405,97 @@ if (isset($_POST['ubah_password'])) {
 
         .btn-secondary:hover {
             background: #e0e0e0;
+        }
+
+        .profile-photo-section {
+            display: flex;
+            align-items: flex-end;
+            gap: 30px;
+            margin-bottom: 30px;
+            padding-bottom: 30px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .profile-photo-preview {
+            flex-shrink: 0;
+        }
+
+        .profile-photo-preview img {
+            width: 150px;
+            height: 150px;
+            border-radius: 15px;
+            object-fit: cover;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+            border: 3px solid #16a34a;
+        }
+
+        .profile-photo-preview .no-photo {
+            width: 150px;
+            height: 150px;
+            border-radius: 15px;
+            background: linear-gradient(135deg, #f0f0f0, #e0e0e0);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 60px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            border: 3px dashed #ddd;
+        }
+
+        .profile-photo-upload {
+            flex: 1;
+        }
+
+        .profile-photo-upload label {
+            display: block;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 12px;
+            font-size: 14px;
+        }
+
+        .file-input-wrapper {
+            position: relative;
+            display: inline-block;
+            width: 100%;
+        }
+
+        .file-input-wrapper input[type="file"] {
+            display: none;
+        }
+
+        .file-input-label {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 20px;
+            background: linear-gradient(135deg, #16a34a, #15803d);
+            color: white;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+            border: 2px solid #16a34a;
+            width: 100%;
+            justify-content: center;
+        }
+
+        .file-input-label:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(22, 163, 74, 0.3);
+        }
+
+        .file-name-display {
+            font-size: 12px;
+            color: #666;
+            margin-top: 8px;
+        }
+
+        .file-info {
+            font-size: 12px;
+            color: #999;
+            margin-top: 10px;
+            line-height: 1.5;
         }
 
         @media (max-width: 768px) {
@@ -395,7 +529,13 @@ if (isset($_POST['ubah_password'])) {
         <!-- Sidebar -->
         <div class="sidebar">
             <div class="sidebar-header">
-                <div class="user-avatar"><?php echo strtoupper(substr($_SESSION['nama'], 0, 1)); ?></div>
+                <div class="user-avatar">
+                    <?php if (!empty($user_data['foto_profil']) && file_exists('../uploads/profil/' . $user_data['foto_profil'])): ?>
+                        <img src="/ProjekSemester3/uploads/profil/<?php echo htmlspecialchars($user_data['foto_profil']); ?>" alt="Foto Profil" onerror="this.parentElement.innerHTML='<?php echo strtoupper(substr($_SESSION['nama'], 0, 1)); ?>'">
+                    <?php else: ?>
+                        <?php echo strtoupper(substr($_SESSION['nama'], 0, 1)); ?>
+                    <?php endif; ?>
+                </div>
                 <div class="user-info">
                     <h3><?php echo $_SESSION['nama']; ?></h3>
                     <div class="user-status">
@@ -406,16 +546,13 @@ if (isset($_POST['ubah_password'])) {
             </div>
 
             <div class="sidebar-nav">
-                <a href="dashboard.php" class="nav-item">
-                    🏕️ Dashboard
-                </a>
                 <a href="edit_profil.php" class="nav-item active">
                     👤 Edit Profil
                 </a>
                 <a href="booking.php" class="nav-item">
                     📅 Booking
                 </a>
-                <a href="../pengunjung/dashboard.php?tab=transaksi" class="nav-item">
+                  <a href="../pengunjung/dashboard.php?tab=transaksi" class="nav-item">
                     📊 Transaksi
                 </a>
                 <a href="../backend/logout.php" class="nav-item">
@@ -438,27 +575,48 @@ if (isset($_POST['ubah_password'])) {
             <!-- Form Edit Data Profil -->
             <div class="form-section">
                 <h2>📋 Data Pribadi</h2>
-                <form method="POST">
+                <form method="POST" enctype="multipart/form-data">
+                    <!-- Profile Photo Section -->
+                    <div class="profile-photo-section">
+                        <div class="profile-photo-preview">
+                            <?php if (!empty($user_data['foto_profil']) && file_exists('../uploads/profil/' . $user_data['foto_profil'])): ?>
+                                <img src="/ProjekSemester3/uploads/profil/<?php echo htmlspecialchars($user_data['foto_profil']); ?>" alt="Foto Profil" onerror="this.style.display='none'">
+                            <?php else: ?>
+                                <div class="no-photo">📷</div>
+                            <?php endif; ?>
+                        </div>
+                        <div class="profile-photo-upload">
+                            <label>Foto Profil</label>
+                            <div class="file-input-wrapper">
+                                <input type="file" id="foto_profil" name="foto_profil" accept="image/*" onchange="updateFileName(this)">
+                                <label for="foto_profil" class="file-input-label">
+                                    📁 Pilih Foto
+                                </label>
+                                <div class="file-name-display" id="file-name"></div>
+                            </div>
+                            <div class="file-info">
+                                Format: JPG, JPEG, PNG, GIF<br>
+                                Ukuran maksimal: 5MB
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="form-grid">
                         <div class="form-group">
                             <label for="nama">Nama Lengkap *</label>
-                            <input type="text" id="nama" name="nama" value="<?php echo htmlspecialchars($user_data['nama']); ?>" required>
+                            <input type="text" id="nama" name="nama" value="<?php echo htmlspecialchars($user_data['nama'] ?? ''); ?>" required>
                         </div>
                         <div class="form-group">
-                            <label for="no_identitas">NIK *</label>
-                            <input type="text" id="no_identitas" name="no_identitas" value="<?php echo htmlspecialchars($pendaki_data['no_identitas'] ?? ''); ?>">
+                            <label for="nik">NIK *</label>
+                            <input type="text" id="nik" name="nik" value="<?php echo htmlspecialchars($pendaki_data['nik'] ?? ''); ?>">
                         </div>
                         <div class="form-group">
                             <label for="email">Email *</label>
-                            <input type="email" id="email" name="email" value="<?php echo htmlspecialchars($user_data['email']); ?>" required>
+                            <input type="email" id="email" name="email" value="<?php echo htmlspecialchars($user_data['email'] ?? ''); ?>" required>
                         </div>
                         <div class="form-group">
-                            <label for="no_hp">Nomor HP *</label>
-                            <input type="tel" id="no_hp" name="no_hp" value="<?php echo htmlspecialchars($user_data['no_hp']); ?>" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="umur">Umur</label>
-                            <input type="number" id="umur" name="umur" min="1" max="150" value="<?php echo htmlspecialchars($pendaki_data['umur'] ?? ''); ?>">
+                            <label for="no_hp">Nomor HP</label>
+                            <input type="tel" id="no_hp" name="no_hp" value="<?php echo htmlspecialchars($pendaki_data['no_hp'] ?? ''); ?>">
                         </div>
                         <div class="form-group form-full">
                             <label for="alamat">Alamat</label>
@@ -500,3 +658,43 @@ if (isset($_POST['ubah_password'])) {
     </div>
 </body>
 </html>
+
+<script>
+    function updateFileName(input) {
+        const fileName = input.files[0]?.name;
+        const fileNameDisplay = document.getElementById('file-name');
+        const preview = document.querySelector('.profile-photo-preview');
+        
+        if (fileName && input.files[0]) {
+            fileNameDisplay.textContent = '✓ ' + fileName;
+            
+            // Preview foto sebelum upload
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                // Hapus no-photo jika ada
+                const noPhotoDiv = preview.querySelector('.no-photo');
+                if (noPhotoDiv) {
+                    noPhotoDiv.remove();
+                }
+                
+                // Cek apakah sudah ada img tag
+                let img = preview.querySelector('img');
+                if (!img) {
+                    img = document.createElement('img');
+                    img.setAttribute('alt', 'Foto Profil');
+                    img.style.width = '150px';
+                    img.style.height = '150px';
+                    img.style.borderRadius = '15px';
+                    img.style.objectFit = 'cover';
+                    img.style.boxShadow = '0 4px 20px rgba(0, 0, 0, 0.15)';
+                    img.style.border = '3px solid #e74c3c';
+                    preview.insertBefore(img, preview.firstChild);
+                }
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(input.files[0]);
+        } else {
+            fileNameDisplay.textContent = '';
+        }
+    }
+</script>
