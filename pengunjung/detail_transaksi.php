@@ -9,6 +9,12 @@ error_reporting(E_ALL);
 session_start();
 include '../backend/koneksi.php';
 
+// ✅ Tampilkan pesan sukses/error dari PRG (pembayaran.php)
+$success_message = $_SESSION['success_message'] ?? null;
+$error_message = $_SESSION['error_message'] ?? null;
+unset($_SESSION['success_message'], $_SESSION['error_message']);
+
+
 // ✅ Ambil parameter (bisa lewat ID atau kode token)
 $pesanan_id = isset($_GET['pesanan_id']) ? intval($_GET['pesanan_id']) : null;
 $kode_token = isset($_GET['kode_token']) ? strtoupper(trim($_GET['kode_token'])) : null;
@@ -217,6 +223,25 @@ footer {
 <footer>
     &copy; 2025 Tahura Raden Soerjo
 </footer>
+<?php if (!empty($success_message)): ?>
+<script>
+Swal.fire({
+    icon: 'success',
+    title: 'Berhasil!',
+    text: '<?= addslashes($success_message) ?>',
+    confirmButtonColor: '#43a047'
+});
+</script>
+<?php elseif (!empty($error_message)): ?>
+<script>
+Swal.fire({
+    icon: 'error',
+    title: 'Gagal!',
+    text: '<?= addslashes($error_message) ?>',
+    confirmButtonColor: '#e53935'
+});
+</script>
+<?php endif; ?>
 
 </body>
 </html>

@@ -1,6 +1,6 @@
 <?php
 // =============================================
-// 💳 PEMBAYARAN PENDAKIAN — FINAL TERINTEGRASI
+// 💳 PEMBAYARAN PENDAKIAN — FINAL PRG READY
 // =============================================
 date_default_timezone_set('Asia/Jakarta');
 ini_set('display_errors', 1);
@@ -9,14 +9,14 @@ error_reporting(E_ALL);
 session_start();
 include '../backend/koneksi.php';
 
-// Ambil pesanan_id dari URL
+// --- Ambil pesanan_id dari URL
 $pesanan_id = $_GET['pesanan_id'] ?? null;
 if (!$pesanan_id) {
     echo "<script>alert('Pesanan tidak ditemukan!'); window.location='../StatusBooking.php';</script>";
     exit;
 }
 
-// Ambil data pesanan
+// --- Ambil data pesanan
 $q = $conn->prepare("
     SELECT ps.*, jp.nama_jalur, p.tanggal_pendakian
     FROM pesanan ps
@@ -34,14 +34,14 @@ if (!$pesanan) {
     exit;
 }
 
-// ✅ Jika status sudah menunggu konfirmasi atau selesai, langsung arahkan ke detail transaksi
+// --- Jika sudah bayar / menunggu konfirmasi → langsung ke detail
 if (in_array($pesanan['status_pesanan'], ['menunggu_konfirmasi', 'lunas', 'batal'])) {
     header("Location: detail_transaksi.php?pesanan_id={$pesanan_id}");
     exit;
 }
 
-// ✅ PROSES UPLOAD PEMBAYARAN
-if (isset($_POST['upload'])) {
+// --- Jika form disubmit
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     try {
         $jumlah_bayar = floatval($_POST['jumlah_bayar']);
         $tanggal_bayar = date('Y-m-d H:i:s');
@@ -49,7 +49,7 @@ if (isset($_POST['upload'])) {
         $status_pembayaran = 'pending';
 
         if (empty($_FILES['bukti_bayar']['name'])) {
-            throw new Exception("Silakan unggah file bukti pembayaran.");
+            throw new Exception("Silakan unggah file bukti pembayaran terlebih dahulu.");
         }
 
         $target_dir = "../uploads/bukti/";
@@ -68,40 +68,26 @@ if (isset($_POST['upload'])) {
             throw new Exception("Gagal menyimpan file bukti pembayaran ke server.");
         }
 
-        // Simpan ke tabel pembayaran
-        $stmt = $conn->prepare("INSERT INTO pembayaran (pesanan_id, metode, jumlah_bayar, tanggal_bayar, bukti_bayar, status_pembayaran)
-                                VALUES (?, ?, ?, ?, ?, ?)");
+        // --- Simpan data pembayaran
+        $stmt = $conn->prepare("
+            INSERT INTO pembayaran (pesanan_id, metode, jumlah_bayar, tanggal_bayar, bukti_bayar, status_pembayaran)
+            VALUES (?, ?, ?, ?, ?, ?)
+        ");
         $stmt->bind_param("isdsss", $pesanan_id, $metode, $jumlah_bayar, $tanggal_bayar, $filename, $status_pembayaran);
         $stmt->execute();
         $stmt->close();
 
-        // Update status pesanan
+        // --- Update status pesanan
         $conn->query("UPDATE pesanan SET status_pesanan='menunggu_konfirmasi' WHERE pesanan_id=$pesanan_id");
 
-        // Redirect ke halaman detail transaksi
-        echo "<script src='https://cdn.jsdelivr.net/npm/sweetalert2@11'></script>
-        <script>
-        Swal.fire({
-            icon: 'success',
-            title: 'Bukti Pembayaran Dikirim!',
-            html: 'Admin akan segera memverifikasi pembayaran kamu.',
-            confirmButtonColor: '#43a047'
-        }).then(() => {
-            window.location = 'detail_transaksi.php?pesanan_id=$pesanan_id';
-        });
-        </script>";
+        // ✅ Gunakan PRG agar tidak terjadi cache miss
+        $_SESSION['success_message'] = "Bukti pembayaran berhasil dikirim! Admin akan segera memverifikasi pembayaran kamu.";
+        header("Location: detail_transaksi.php?pesanan_id=" . $pesanan_id);
         exit;
 
     } catch (Exception $e) {
-        echo "<script src='https://cdn.jsdelivr.net/npm/sweetalert2@11'></script>
-        <script>
-        Swal.fire({
-            icon: 'error',
-            title: 'Gagal!',
-            html: '".addslashes($e->getMessage())."',
-            confirmButtonColor: '#e53935'
-        });
-        </script>";
+        $_SESSION['error_message'] = $e->getMessage();
+        header("Location: detail_transaksi.php?pesanan_id=" . $pesanan_id);
         exit;
     }
 }
